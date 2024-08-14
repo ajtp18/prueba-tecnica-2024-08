@@ -1,0 +1,28 @@
+volumes:
+  db:
+
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    volumes:
+      - db:/data
+    environment:
+      PGDATA: /data
+      POSTGRES_USER: nestjs
+      POSTGRES_PASSWORD: nestjs
+      POSTGRES_DB: nestjs
+  
+  app:
+    image: devat/wompi
+    build: .
+    ports:
+      - 3000:3000
+    environment:
+      DB_HOST: 'db'
+      DB_PORT: '5432'
+      DB_USERNAME: 'nestjs'
+      DB_PASSWORD: 'nestjs'
+      DB_NAME: 'nestjs'
+      PORT: '3000'
+    env_file:
+      - .env

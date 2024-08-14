@@ -1,7 +1,4 @@
 import { Transaction } from '../entities/transactions/transaction.entity';
+import type { IRepository } from './standard.repository'
 
-export interface TransactionRepository {
-  create(transaction: Transaction): Promise<Transaction>;
-  update(transaction: Transaction): Promise<Transaction>;
-  findById(id: number): Promise<Transaction>;
-}
+export type ITransactionRepository = IRepository<Transaction>;

@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../../core/entities/products/product.entity';
-import { ProductRepository } from '../../core/repositories/product.repository';
+import { IProductRepository } from '../../core/repositories/product.repository';
 
 @Injectable()
-export class TypeOrmProductRepository implements ProductRepository {
+export class TypeOrmProductRepository implements IProductRepository {
   constructor(
     @InjectRepository(Product)
     private readonly ormRepository: Repository<Product>,
@@ -19,7 +19,7 @@ export class TypeOrmProductRepository implements ProductRepository {
     return this.ormRepository.findOneBy({ id });
   }
 
-  async save(product: Product): Promise<Product> {
+  async create(product: Product): Promise<Product> {
     return this.ormRepository.save(product);
   }
 
