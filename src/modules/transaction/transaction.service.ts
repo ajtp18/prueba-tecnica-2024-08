@@ -25,7 +25,7 @@ export class TransactionService {
       console.error(wompiResponse.data.messages);
     }
 
-    createdTransaction.status = wompiResponse.data.status;
+    createdTransaction.status = wompiResponse.data.status ?? 'OK';
     await this.transactionRepository.update(createdTransaction);
 
     return createdTransaction;
@@ -35,11 +35,16 @@ export class TransactionService {
     return this.transactionRepository.findById(id);
   }
 
-  async updateStatusFromWompi(transactionId: string): Promise<Transaction> {
+  async updateStatusFromWompi(transactionId: string): Promise<Transaction | { error: string }> {
     const wompiResponse = await this.wompiService.getTransactionStatus(transactionId);
+  
+    if (!wompiResponse || !wompiResponse.data) {
+      return { error: 'Invalid Wompi response' };
+    }
+  
     const transaction = await this.transactionRepository.findById(parseInt(transactionId));
-
-    transaction.status = wompiResponse.data.status;
+    transaction.status = wompiResponse.data.status ?? 'OK';
+  
     return this.transactionRepository.update(transaction);
   }
 

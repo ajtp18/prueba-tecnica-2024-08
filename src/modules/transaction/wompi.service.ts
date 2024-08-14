@@ -60,8 +60,6 @@ export class WompiService {
       },
     };
 
-    console.log(requestBody);
-
     return await this.httpService
       .post(`${this.baseUrl}/transactions`, requestBody, {
         headers: {
