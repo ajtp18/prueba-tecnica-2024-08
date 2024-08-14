@@ -1,7 +1,26 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AxiosResponse } from 'axios';
+
+
+export class Card {
+  @ApiProperty()
+  number: string;
+
+  @ApiProperty()
+  cvc: string;
+
+  @ApiProperty()
+  exp_month: string;
+
+  @ApiProperty()
+  exp_year: string;
+
+  @ApiProperty()
+  card_holder: string;
+}
 
 @Injectable()
 export class CardService {
@@ -16,13 +35,7 @@ export class CardService {
     this.publicKey = this.configService.get<string>('WOMPI_PUBLIC_KEY');
   }
 
-  async tokenizeCard(cardDetails: {
-    number: string;
-    cvc: string;
-    exp_month: string;
-    exp_year: string;
-    card_holder: string;
-  }): Promise<string> {
+  async tokenizeCard(cardDetails: Card): Promise<string> {
     const response = await this.httpService
       .post(`${this.baseUrl}/tokens/cards`, cardDetails, {
         headers: {
