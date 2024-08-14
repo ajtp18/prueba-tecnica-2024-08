@@ -17,7 +17,7 @@ export class ProductService {
   }
 
   save(product: Product): Promise<Product> {
-    return this.productRepository.save(product);
+    return this.productRepository.create(product);
   }
 
   updateStock(id: number, stock: number): Promise<void> {

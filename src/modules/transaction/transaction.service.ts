@@ -1,22 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { TransactionRepository } from '../../core/repositories/transaction.repository';
+import { TypeOrmTransactionRepository } from '../../infrastructure/repositories/typeorm-transaction.repository';
 import { Transaction } from '../../core/entities/transactions/transaction.entity';
 import { WompiService } from './wompi.service';
 
 @Injectable()
 export class TransactionService {
   constructor(
-    private readonly transactionRepository: TransactionRepository,
+    private readonly transactionRepository: TypeOrmTransactionRepository,
     private readonly wompiService: WompiService,
   ) {}
 
   async create(transaction: Transaction): Promise<Transaction> {
     const createdTransaction = await this.transactionRepository.create(transaction);
 
+    // TODO: Card injection
     const wompiResponse = await this.wompiService.createTransaction(
       transaction.amount * 100,
       createdTransaction.id.toString(),
+      `transaction+${createdTransaction.id}@service.internal`,
     );
+
+    if (wompiResponse.data.status == 'ERROR') {
+      console.error('Wompi API Error');
+      console.error(wompiResponse.data.messages);
+    }
 
     createdTransaction.status = wompiResponse.data.status;
     await this.transactionRepository.update(createdTransaction);
