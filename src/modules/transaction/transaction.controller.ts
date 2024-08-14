@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { Transaction } from '../../core/entities/transactions/transaction.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiProperty } from '@nestjs/swagger';
@@ -17,6 +17,7 @@ class TransactionCreationClaim {
 
 @ApiTags('Transactions')
 @Controller('transactions')
+@UseInterceptors(ClassSerializerInterceptor)
 export class TransactionController {
   constructor(
     private readonly transactionService: TransactionService,
@@ -33,14 +34,6 @@ export class TransactionController {
     
     return transaction;
   }
-
-  // @Patch(':id')
-  // @ApiOperation({ summary: 'Update a transaction' })
-  // @ApiResponse({ status: 200, description: 'Transaction updated successfully', type: Transaction })
-  // update(@Param('id') id: number, @Body() transaction: Transaction): Promise<Transaction> {
-  //   transaction.id = id;
-  //   return this.transactionService.update(transaction);
-  // }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a transaction' })

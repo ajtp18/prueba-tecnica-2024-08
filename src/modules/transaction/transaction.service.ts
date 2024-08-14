@@ -5,7 +5,7 @@ import { WompiService } from './wompi.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from '../../core/entities/products/product.entity';
 import { TypeOrmProductRepository } from '../../infrastructure/repositories/typeorm-product.repository';
-import { TypeOrmCustomerRepository } from 'src/infrastructure/repositories/typeorm-customer.repository';
+import { TypeOrmCustomerRepository } from '../../infrastructure/repositories/typeorm-customer.repository';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -70,7 +70,13 @@ export class TransactionService {
   }
 
   async findById(id: number): Promise<Transaction> {
-    return this.transactionRepository.findById(id);
+    const transaction = await this.transactionRepository.findById(id);
+    if (transaction.status) {
+      transaction.status = await this.wompiService.getTransactionStatus(transaction.paymentId);
+
+      await this.transactionRepository.update(transaction);
+    }
+    return transaction;
   }
 
   async updateStatusFromWompi(transactionId: string): Promise<Transaction | { error: string }> {

@@ -1,4 +1,4 @@
-import { Controller, Body, Param, Post, Patch, Get } from '@nestjs/common';
+import { Controller, Body, Param, Post, Patch, Get, UseInterceptors, ClassSerializerInterceptor} from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import { Card, CardService } from './card.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 
 @ApiTags('Customers')
 @Controller('customer')
+@UseInterceptors(ClassSerializerInterceptor)
 export class CustomersController {
   constructor(
     private readonly customerService: CustomerService,
@@ -35,6 +36,8 @@ export class CustomersController {
   @ApiResponse({status: 200, description: 'Customer succesfully updated', type: Customer})
   async update(@Param('id') id: number, @Body() customer: Customer): Promise<Customer> {
     customer.id = id;
+
+    if (customer.pin) customer.pin = await bcrypt.hash(customer.pin, 10);
 
     return await this.customerService.save(customer);
   }

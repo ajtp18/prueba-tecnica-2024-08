@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Product } from '../products/product.entity';
 import { Customer } from '../customers/customer.entity';
 import { Delivery } from '../deliveries/delivery.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity()
 export class Transaction {
@@ -22,6 +23,7 @@ export class Transaction {
 
   @OneToOne(() => Delivery, delivery => delivery.transaction, { eager: true })
   @ApiProperty({ type: () => Delivery })
+  @Exclude()
   delivery: Delivery;
 
   @Column('decimal')
@@ -38,6 +40,7 @@ export class Transaction {
 
   @Column({nullable: true})
   @ApiProperty({readOnly: true})
+  @Exclude()
   paymentId: string;
 
   @CreateDateColumn()

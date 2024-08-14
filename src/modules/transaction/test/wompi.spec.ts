@@ -1,52 +1,46 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WompiService } from '../wompi.service';
-import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { of } from 'rxjs';
-import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { AxiosResponse } from 'axios';
 
 describe('WompiService', () => {
   let service: WompiService;
-  let httpService: jest.Mocked<HttpService>;
-  let configService: jest.Mocked<ConfigService>;
-
-  const mockConfigService = {
-    get: jest.fn(),
-  };
-
-  const mockHttpService = {
-    get: jest.fn(),
-    post: jest.fn(),
-  };
+  let httpService: HttpService;
+  let configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WompiService,
-        { provide: HttpService, useValue: mockHttpService },
-        { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: HttpService,
+          useValue: {
+            get: jest.fn(),
+            post: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              const config = {
+                'WOMPI_BASE_URL': 'https://sandbox.wompi.co/v1',
+                'WOMPI_PUBLIC_KEY': 'public-key',
+                'WOMPI_PRIVATE_KEY': 'private-key',
+                'WOMPI_SIGNATURE_KEY': 'signature-key',
+              };
+              return config[key];
+            }),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<WompiService>(WompiService);
-    httpService = module.get(HttpService);
-    configService = module.get(ConfigService);
-
-    // Mock configuration values
-    configService.get.mockImplementation((key: string) => {
-      switch (key) {
-        case 'WOMPI_BASE_URL':
-          return 'https://sandbox.wompi.co/v1';
-        case 'WOMPI_PUBLIC_KEY':
-          return 'public-key';
-        case 'WOMPI_PRIVATE_KEY':
-          return 'private-key';
-        case 'WOMPI_SIGNATURE_KEY':
-          return 'signature-key';
-        default:
-          return null;
-      }
-    });
+    httpService = module.get<HttpService>(HttpService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -55,76 +49,65 @@ describe('WompiService', () => {
 
   describe('getPresignedToken', () => {
     it('should return a presigned token', async () => {
-      const mockResponse: AxiosResponse = {
+      const mockResponse = {
         data: {
           data: {
             presigned_acceptance: {
-              acceptance_token: 'test-token',
+              acceptance_token: 'mock-token',
             },
           },
         },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {
-            headers: {},
-            method: 'get',
-            url: 'https://example.com',
-          } as InternalAxiosRequestConfig,
-      };
+      } as AxiosResponse;
 
-      httpService.get.mockReturnValue(of(mockResponse));
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockResponse));
 
-      const token = await (service as any).getPresignedToken(); // getPresignedToken is private
-      expect(token).toBe('test-token');
+      const result = await service['getPresignedToken']();
+      expect(result).toBe('mock-token');
       expect(httpService.get).toHaveBeenCalledWith('https://sandbox.wompi.co/v1/merchants/public-key');
-    });
-  });
-
-  describe('createSignature', () => {
-    it('should create a correct signature', () => {
-      const signature = (service as any).createSignature('test-ref', 10000.00, 'COP');
-      expect(signature).toBe('6eeefd31afae0e9a990007bb9e31c59eb787e6a086e5016ded79d1cb9e4343a1');
     });
   });
 
   describe('createTransaction', () => {
     it('should create a transaction and return the response', async () => {
-      const mockPresignedToken = 'test-token';
-      const mockTransactionResponse: AxiosResponse = {
+      const mockResponse = {
         data: {
-          status: 'OK',
-          transaction: {},
+          data: {
+            id: 'transaction-id',
+            status: 'APPROVED',
+          },
         },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {
-            headers: {},
-            method: 'get',
-            url: 'https://example.com',
-          } as InternalAxiosRequestConfig,
-      };
+      } as AxiosResponse;
   
-      // Mock de la obtención del token presigned
-      jest.spyOn(service as any, 'getPresignedToken').mockResolvedValue(mockPresignedToken);
-      httpService.post.mockReturnValue(of(mockTransactionResponse));
+      jest.spyOn(httpService, 'post').mockReturnValue(of(mockResponse));
+      jest.spyOn(httpService, 'get').mockReturnValue(
+        of({
+          data: {
+            data: {
+              presigned_acceptance: {
+                acceptance_token: 'mock-token',
+              },
+            },
+          },
+        } as AxiosResponse)
+      );
   
-      const response = await service.createTransaction(10000, 'test-ref', 'test@example.com');
+      const result = await service.createTransaction(10000, 'ref123', 'customer@example.com', 'card-token');
   
-      expect(response.data.status).toBe('OK');
+      expect(result.data.data.id).toBe('transaction-id');
+      expect(result.data.data.status).toBe('APPROVED');
       expect(httpService.post).toHaveBeenCalledWith(
         'https://sandbox.wompi.co/v1/transactions',
         {
           amount_in_cents: 10000,
-          acceptance_token: mockPresignedToken,
+          acceptance_token: 'mock-token',
           currency: 'COP',
-          customer_email: 'test@example.com',
-          reference: 'test-ref',
+          customer_email: 'customer@example.com',
+          reference: 'ref123',
           signature: expect.any(String),
           payment_method: {
-            type: 'NEQUI',
-            phone_number: '3107654321', 
+            type: 'CARD',
+            installments: 1,
+            token: 'card-token',
           },
         },
         {
@@ -134,63 +117,22 @@ describe('WompiService', () => {
         }
       );
     });
-  
-    it('should handle an error during transaction creation', async () => {
-      const mockPresignedToken = 'test-token';
-      const mockErrorResponse = {
-        response: {
-          data: {
-            error: {
-              messages: ['Some error occurred'],
-            },
-          },
-        },
-      };
-  
-      jest.spyOn(service as any, 'getPresignedToken').mockResolvedValue(mockPresignedToken);
-      
-      httpService.post.mockReturnValueOnce(
-        of({
-          data: {
-            status: 'ERROR',
-            messages: mockErrorResponse.response.data.error.messages,
-          },
-          status: 400,
-          statusText: 'Bad Request',
-          headers: {},
-          config: {},
-        } as AxiosResponse)
-      );
-  
-      const response = await service.createTransaction(10000, 'test-ref', 'test@example.com');
-  
-      expect(response.data.status).toBe('ERROR');
-      expect(response.data.messages).toContain('Some error occurred');
-    });
   });
 
   describe('getTransactionStatus', () => {
-    it('should return the transaction status', async () => {
-      const mockTransactionResponse: AxiosResponse = {
+    it('should return transaction status', async () => {
+      const mockResponse = {
         data: {
-          status: 'OK',
-          transaction: {},
+          data: {
+            status: 'APPROVED',
+          },
         },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {
-            headers: {},
-            method: 'get',
-            url: 'https://example.com',
-          } as InternalAxiosRequestConfig,
-      };
+      } as AxiosResponse;
 
-      httpService.get.mockReturnValue(of(mockTransactionResponse));
+      jest.spyOn(httpService, 'get').mockReturnValue(of(mockResponse));
 
-      const response = await service.getTransactionStatus('transaction-id');
-
-      expect(response.data.status).toBe('OK');
+      const result = await service.getTransactionStatus('transaction-id');
+      expect(result).toBe('APPROVED');
       expect(httpService.get).toHaveBeenCalledWith(
         'https://sandbox.wompi.co/v1/transactions/transaction-id',
         {

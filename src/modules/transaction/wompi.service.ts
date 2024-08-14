@@ -76,6 +76,8 @@ export class WompiService {
         headers: {
           Authorization: `Bearer ${this.privateKey}`,
         },
-      }).toPromise();
+      }).toPromise().then(out => {
+        return out.data.data.status;
+      });
   }
 }

@@ -1,349 +1,152 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionController } from '../transaction.controller';
-import { TransactionService } from '../transaction.service';
+import { TransactionService } from '../../transaction/transaction.service';
 import { TypeOrmTransactionRepository } from '../../../infrastructure/repositories/typeorm-transaction.repository';
+import { TypeOrmProductRepository } from '../../../infrastructure/repositories/typeorm-product.repository';
+import { TypeOrmCustomerRepository } from '../../../infrastructure/repositories/typeorm-customer.repository';
+import { WompiService } from '../../transaction/wompi.service';
+import { ConfigService } from '@nestjs/config';
 import { Transaction } from '../../../core/entities/transactions/transaction.entity';
-import { WompiService } from '../wompi.service';
-import { TransactionCreationError } from '../transactions.exceptions';
-import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { Product } from '../../../core/entities/products/product.entity';
+import { Customer } from '../../../core/entities/customers/customer.entity';
 
 describe('TransactionService', () => {
-  let transactionService: TransactionService;
-  let transactionRepository: jest.Mocked<TypeOrmTransactionRepository>;
-  let wompiService: jest.Mocked<WompiService>;
+  let service: TransactionService;
+  let transactionRepository: TypeOrmTransactionRepository;
+  let productRepository: TypeOrmProductRepository;
+  let customerRepository: TypeOrmCustomerRepository;
+  let wompiService: WompiService;
+  let configService: ConfigService;
 
   beforeEach(async () => {
-    const mockTransactionRepository = {
-      create: jest.fn(),
-      findById: jest.fn(),
-      update: jest.fn(),
-    };
-
-    const mockWompiService = {
-      createTransaction: jest.fn(),
-      getTransactionStatus: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionService,
         {
           provide: TypeOrmTransactionRepository,
-          useValue: mockTransactionRepository,
+          useValue: {
+            create: jest.fn(),
+            findById: jest.fn(),
+            update: jest.fn(),
+          },
+        },
+        {
+          provide: TypeOrmProductRepository,
+          useValue: {
+            findById: jest.fn(),
+            updateStock: jest.fn(),
+          },
+        },
+        {
+          provide: TypeOrmCustomerRepository,
+          useValue: {
+            findById: jest.fn(),
+          },
         },
         {
           provide: WompiService,
-          useValue: mockWompiService,
+          useValue: {
+            createTransaction: jest.fn(),
+            getTransactionStatus: jest.fn(),
+          },
         },
-      ],
-    }).compile();
-
-    transactionService = module.get<TransactionService>(TransactionService);
-    transactionRepository = module.get(TypeOrmTransactionRepository);
-    wompiService = module.get(WompiService);
-  });
-
-  describe('create', () => {
-    it('should create a transaction and update its status', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const mockWompiResponse = {
-        data: {
-          status: 'OK',
-          messages: [],
-        },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {},
-      };
-
-      transactionRepository.create.mockResolvedValue(mockTransaction);
-      wompiService.createTransaction.mockResolvedValue(mockWompiResponse);
-      transactionRepository.update.mockResolvedValue({
-        ...mockTransaction,
-        status: 'OK',
-      });
-
-      const transaction = await transactionService.create(mockTransaction);
-
-      expect(transactionRepository.create).toHaveBeenCalledWith(mockTransaction);
-      expect(wompiService.createTransaction).toHaveBeenCalledWith(
-        mockTransaction.amount * 100,
-        mockTransaction.id.toString(),
-        `transaction+${mockTransaction.id}@service.internal`,
-      );
-      expect(transactionRepository.update).toHaveBeenCalledWith({
-        ...mockTransaction,
-        status: 'OK',
-      });
-      expect(transaction.status).toBe('OK');
-    });
-
-    it('should handle an error when Wompi API fails during transaction creation', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const errorWompiResponse = {
-        data: {
-          status: 'ERROR',
-          messages: ['Something went wrong'],
-        },
-      };
-
-      transactionRepository.create.mockResolvedValue(mockTransaction);
-      wompiService.createTransaction.mockResolvedValue(errorWompiResponse);
-      transactionRepository.update.mockResolvedValue({
-        ...mockTransaction,
-        status: 'ERROR',
-      });
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      const transaction = await transactionService.create(mockTransaction);
-
-      expect(transactionRepository.create).toHaveBeenCalledWith(mockTransaction);
-      expect(wompiService.createTransaction).toHaveBeenCalledWith(
-        mockTransaction.amount * 100,
-        mockTransaction.id.toString(),
-        `transaction+${mockTransaction.id}@service.internal`,
-      );
-      expect(transactionRepository.update).toHaveBeenCalledWith({
-        ...mockTransaction,
-        status: 'ERROR',
-      });
-      expect(transaction.status).toBe('ERROR');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Wompi API Error');
-      expect(consoleErrorSpy).toHaveBeenCalledWith(errorWompiResponse.data.messages);
-
-      consoleErrorSpy.mockRestore();
-    });
-  });
-
-  describe('findById', () => {
-    it('should return a transaction by ID', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      transactionRepository.findById.mockResolvedValue(mockTransaction);
-      const result = await transactionService.findById(1);
-
-      expect(result).toEqual(mockTransaction);
-      expect(transactionRepository.findById).toHaveBeenCalledWith(1);
-    });
-  });
-
-  describe('updateStatusFromWompi', () => {
-    it('should update the transaction status from Wompi', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-  
-      const mockWompiResponse: AxiosResponse = {
-        data: {
-          status: 'OK',
-          messages: [],
-        },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {
-          headers: {},
-          method: 'get',
-          url: 'https://example.com',
-        } as InternalAxiosRequestConfig,
-      };
-  
-      transactionRepository.findById.mockResolvedValue(mockTransaction);
-      wompiService.getTransactionStatus.mockResolvedValue(mockWompiResponse);
-      transactionRepository.update.mockResolvedValue({
-        ...mockTransaction,
-        status: 'OK',
-      });
-  
-      const transaction = await transactionService.updateStatusFromWompi(mockTransaction.id.toString());
-  
-      if ('status' in transaction) {
-        expect(transaction.status).toBe('OK');
-      } else {
-        fail('Expected a transaction but received an error');
-      }
-  
-      expect(transactionRepository.findById).toHaveBeenCalledWith(mockTransaction.id);
-      expect(wompiService.getTransactionStatus).toHaveBeenCalledWith(mockTransaction.id.toString());
-      expect(transactionRepository.update).toHaveBeenCalledWith({
-        ...mockTransaction,
-        status: 'OK',
-      });
-    });
-  });
-
-  describe('update', () => {
-    it('should update a transaction', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'OK',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      transactionRepository.update.mockResolvedValue(mockTransaction);
-
-      const result = await transactionService.update(mockTransaction);
-
-      expect(result).toEqual(mockTransaction);
-      expect(transactionRepository.update).toHaveBeenCalledWith(mockTransaction);
-    });
-  });
-});
-
-describe('TransactionController', () => {
-  let controller: TransactionController;
-  let transactionService: jest.Mocked<TransactionService>;
-
-  beforeEach(async () => {
-    const mockTransactionService = {
-      create: jest.fn(),
-      update: jest.fn(),
-      findById: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [TransactionController],
-      providers: [
         {
-          provide: TransactionService,
-          useValue: mockTransactionService,
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'WOMPI_REFERENCE_PREFIX') {
+                return 'WOMPITEST';
+              }
+              return null;
+            }),
+          },
         },
       ],
     }).compile();
 
-    controller = module.get<TransactionController>(TransactionController);
-    transactionService = module.get(TransactionService);
+    service = module.get<TransactionService>(TransactionService);
+    transactionRepository = module.get<TypeOrmTransactionRepository>(TypeOrmTransactionRepository);
+    productRepository = module.get<TypeOrmProductRepository>(TypeOrmProductRepository);
+    customerRepository = module.get<TypeOrmCustomerRepository>(TypeOrmCustomerRepository);
+    wompiService = module.get<WompiService>(WompiService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   describe('create', () => {
-    it('should create a transaction and return it', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    it('should create a transaction and update stock', async () => {
+      const product = new Product();
+      product.id = 1;
+      product.stock = 10;
+      product.price = 100;
 
-      transactionService.create.mockResolvedValue({
-        ...mockTransaction,
-        status: 'OK',
+      const customer = new Customer();
+      customer.id = 1;
+      customer.cards = { 0: 'mockCardToken' };
+
+      const transaction = new Transaction();
+      transaction.id = 1;
+      transaction.status = 'PENDING';
+
+      jest.spyOn(productRepository, 'findById').mockResolvedValue(product);
+      jest.spyOn(productRepository, 'updateStock').mockResolvedValue(null);
+      jest.spyOn(customerRepository, 'findById').mockResolvedValue(customer);
+      jest.spyOn(transactionRepository, 'create').mockResolvedValue(transaction);
+      jest.spyOn(wompiService, 'createTransaction').mockResolvedValue({
+        data: { data: { id: 'wompiTransactionId', status: 'OK' } } as any,
       });
 
-      const result = await controller.create(mockTransaction);
+      const result = await service.create(1, 1, 0);
 
-      expect(transactionService.create).toHaveBeenCalledWith(mockTransaction);
-      expect(result).toEqual({
-        ...mockTransaction,
-        status: 'OK',
-      });
+      expect(productRepository.findById).toHaveBeenCalledWith(1);
+      expect(productRepository.updateStock).toHaveBeenCalledWith(1, 9);
+      expect(customerRepository.findById).toHaveBeenCalledWith(1);
+      expect(transactionRepository.create).toHaveBeenCalled();
+      expect(wompiService.createTransaction).toHaveBeenCalled();
+      expect(result.status).toBe('OK');
+      expect(result.paymentId).toBe('wompiTransactionId');
     });
 
-    it('should throw a TransactionCreationError if the status is ERROR', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    it('should throw an error if product is out of stock', async () => {
+      const product = new Product();
+      product.id = 1;
+      product.stock = 0;
 
-      transactionService.create.mockResolvedValue({
-        ...mockTransaction,
-        status: 'ERROR',
-      });
+      jest.spyOn(productRepository, 'findById').mockResolvedValue(product);
 
-      await expect(controller.create(mockTransaction)).rejects.toThrow(TransactionCreationError);
-      expect(transactionService.create).toHaveBeenCalledWith(mockTransaction);
+      await expect(service.create(1, 1, 0)).rejects.toThrow(`The producto #${product.id} is out of stock, try again later`);
     });
-  });
 
-  describe('update', () => {
-    it('should update a transaction and return it', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    it('should throw an error if card index is invalid', async () => {
+      const product = new Product();
+      product.id = 1;
+      product.stock = 10;
 
-      const updatedTransaction = {
-        ...mockTransaction,
-        status: 'OK',
-      };
-      transactionService.update.mockResolvedValue(updatedTransaction);
+      const customer = new Customer();
+      customer.id = 1;
+      customer.cards = {};
 
-      const result = await controller.update(mockTransaction.id, updatedTransaction);
+      jest.spyOn(productRepository, 'findById').mockResolvedValue(product);
+      jest.spyOn(customerRepository, 'findById').mockResolvedValue(customer);
 
-      expect(transactionService.update).toHaveBeenCalledWith(updatedTransaction);
-      expect(result).toEqual(updatedTransaction);
+      await expect(service.create(1, 1, 0)).rejects.toThrow('The referenced card is disabled or not exists');
     });
   });
 
   describe('findById', () => {
-    it('should return a transaction by ID', async () => {
-      const mockTransaction: Transaction = {
-        id: 1,
-        productId: 1,
-        customerId: 1,
-        amount: 100.0,
-        status: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    it('should return a transaction and update its status', async () => {
+      const transaction = new Transaction();
+      transaction.id = 1;
+      transaction.status = 'PENDING';
+      transaction.paymentId = 'wompiTransactionId';
 
-      transactionService.findById.mockResolvedValue(mockTransaction);
+      jest.spyOn(transactionRepository, 'findById').mockResolvedValue(transaction);
+      jest.spyOn(wompiService, 'getTransactionStatus').mockResolvedValue('OK');
 
-      const result = await controller.findById(1);
+      const result = await service.findById(1);
 
-      expect(transactionService.findById).toHaveBeenCalledWith(1);
-      expect(result).toEqual(mockTransaction);
+      expect(transactionRepository.findById).toHaveBeenCalledWith(1);
+      expect(wompiService.getTransactionStatus).toHaveBeenCalledWith('wompiTransactionId');
+      expect(transactionRepository.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'OK' }));
+      expect(result.status).toBe('OK');
     });
   });
 });
-

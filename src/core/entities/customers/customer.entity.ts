@@ -19,8 +19,10 @@ export class Customer {
   pin: string;
 
   @Column({type: 'jsonb'})
+  @Exclude()
   cards: {[k: number]: string};
 
   @OneToMany(() => Transaction, transaction => transaction.customer)
+  @Exclude()
   transactions: Transaction[];
 }
