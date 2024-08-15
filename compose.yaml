@@ -1,3 +1,5 @@
+version: '3.8'
+
 volumes:
   db:
 
@@ -11,18 +13,31 @@ services:
       POSTGRES_USER: nestjs
       POSTGRES_PASSWORD: nestjs
       POSTGRES_DB: nestjs
-  
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nestjs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
-    image: devat/wompi
+    image: docker.io/devat08/wompi-backend
     build: .
     ports:
-      - 3000:3000
+      - 4000:80
     environment:
       DB_HOST: 'db'
       DB_PORT: '5432'
       DB_USERNAME: 'nestjs'
       DB_PASSWORD: 'nestjs'
       DB_NAME: 'nestjs'
-      PORT: '3000'
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "supervisorctl status | grep RUNNING | wc -l | grep -q 2"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

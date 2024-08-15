@@ -43,7 +43,7 @@ export class WompiService {
       return createHash('sha256').update(raw).digest('hex');
   }
 
-  async createTransaction(amountInCents: number, reference: string, customerEmail: string) {
+  async createTransaction(amountInCents: number, reference: string, customerEmail: string, cardToken: string) {
     let token = await this.getPresignedToken();
     
     const requestBody = {
@@ -54,13 +54,11 @@ export class WompiService {
       reference,
       signature: this.createSignature(reference, amountInCents, 'COP'),
       payment_method: {
-        // TODO: Make implementation for WomPi CARD
-        type: 'NEQUI',
-        phone_number: "3107654321",
+        type: "CARD",
+        installments: 1,
+        token: cardToken
       },
     };
-
-    console.log(requestBody);
 
     return await this.httpService
       .post(`${this.baseUrl}/transactions`, requestBody, {
@@ -78,6 +76,8 @@ export class WompiService {
         headers: {
           Authorization: `Bearer ${this.privateKey}`,
         },
-      }).toPromise();
+      }).toPromise().then(out => {
+        return out.data.data.status;
+      });
   }
 }

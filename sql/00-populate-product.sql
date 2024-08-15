@@ -8,7 +8,7 @@ BEGIN
         INSERT INTO product (name, price, stock)
         VALUES (
             'Product ' || i,
-            (random() * 1000)::numeric(10,2),
+            ((random() * 100000) + 5000)::numeric(10,2),
             (random() * 100 + 1)::integer
         );
     END LOOP;
