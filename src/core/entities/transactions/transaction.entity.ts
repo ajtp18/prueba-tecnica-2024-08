@@ -22,7 +22,6 @@ export class Transaction {
   customer: Customer;
 
   @OneToOne(() => Delivery, delivery => delivery.transaction, { eager: true })
-  @ApiProperty({ type: () => Delivery })
   @Exclude()
   delivery: Delivery;
 

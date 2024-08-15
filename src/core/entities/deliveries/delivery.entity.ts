@@ -1,6 +1,7 @@
 import { Entity, OneToOne, JoinColumn, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transaction } from '../transactions/transaction.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity()
 export class Delivery {
@@ -10,7 +11,7 @@ export class Delivery {
 
     @OneToOne(() => Transaction, transaction => transaction.delivery)
     @JoinColumn()
-    @ApiProperty({ type: () => Transaction })
+    @Exclude()
     transaction: Transaction;
 
     @Column()
