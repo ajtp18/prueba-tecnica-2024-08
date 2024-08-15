@@ -5,14 +5,6 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuración de CORS
-  app.enableCors({
-    origin: 'http://localhost:5173/',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-    allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
-  });
-
   // Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('Wompi payment gateway')
@@ -21,7 +13,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const port = process.env.PORT || 80;
+  const port = process.env.PORT ?? 3000;
   await app.listen(port);
 }
 
