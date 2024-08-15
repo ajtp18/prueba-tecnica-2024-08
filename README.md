@@ -1,77 +1,70 @@
-<<<<<<< HEAD
-# wompi-prueba-tecnica
-=======
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Backend - Wompi Payment Gateway
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este proyecto es el backend de una aplicación que integra un gateway de pagos utilizando Wompi. Está construido con **NestJS** y se conecta a una base de datos **PostgreSQL**. Este backend maneja transacciones, productos, clientes y entregas, proporcionando una API robusta para la gestión de pagos y órdenes.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tabla de Contenidos
 
-## Description
+1. [Características](#características)
+2. [Requisitos Previos](#requisitos-previos)
+3. [Instalación](#instalación)
+4. [Configuración](#configuración)
+5. [Ejecución](#ejecución)
+6. [Pruebas](#pruebas)
+7. [Despliegue](#despliegue)
+8. [Estructura del Proyecto](#estructura-del-proyecto)
+9. [Contribución](#contribución)
+10. [Licencia](#licencia)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Características
 
-## Installation
+- **Gestión de productos**: CRUD de productos en el sistema.
+- **Gestión de transacciones**: Creación y actualización de transacciones con integración a Wompi.
+- **Gestión de clientes**: Administración de clientes y sus métodos de pago.
+- **Gestión de entregas**: Asociación de entregas con transacciones exitosas.
+- **Swagger**: Documentación de la API disponible en `/api`.
 
-```bash
-$ npm install
-```
+## Requisitos Previos
 
-## Running the app
+Antes de comenzar, asegúrate de tener instalados los siguientes requisitos:
 
-```bash
-# development
-$ npm run start
+- [Node.js](https://nodejs.org/) (v16 o superior)
+- [npm](https://www.npmjs.com/) (v8 o superior)
+- [Docker](https://www.docker.com/) (opcional, para despliegue y pruebas locales)
+- [PostgreSQL](https://www.postgresql.org/) (v13 o superior)
 
-# watch mode
-$ npm run start:dev
+## Instalación
 
-# production mode
-$ npm run start:prod
-```
-
-## Test
+Clona el repositorio en tu máquina local y navega al directorio del proyecto:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+git clone https://github.com/tu-usuario/tu-repositorio.git
+cd tu-repositorio/backend
+### instala las dependencias
+npm install
 ```
 
-## Support
+## Configuracion
+Variables de Entorno: Crea un archivo .env en la raíz del proyecto con las siguientes variables:
+env
+Copiar código
+- DB_HOST=db
+- DB_PORT=5432
+- DB_USERNAME=nestjs
+- DB_PASSWORD=nestjs
+- DB_NAME=nestjs
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- WOMPI_BASE_URL=https://sandbox.wompi.co/v1
+- WOMPI_PUBLIC_KEY=tu-public-key
+- WOMPI_PRIVATE_KEY=tu-private-key
+- WOMPI_SIGNATURE_KEY=tu-signature-key
 
-## Stay in touch
+**Configuración de la Base de Datos:** Asegúrate de que tu instancia de PostgreSQL esté corriendo y sea accesible con las credenciales proporcionadas en el archivo .env.
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Ejecucion
+```bash
+npm run start:dev
+```
 
-## License
+## Despliegue
 
-Nest is [MIT licensed](LICENSE).
->>>>>>> 7e7e4a9 (chore: Add initial project files and configurations)
+El despliegue de esta aplicacion estaa lanzada en Render, tanto el backend como el frontend
