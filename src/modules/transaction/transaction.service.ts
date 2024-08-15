@@ -57,7 +57,7 @@ export class TransactionService {
       console.error(wompiResponse.data.messages);
     } else {
       console.log('Wompi response');
-      console.error(wompiResponse.data);
+      console.log(wompiResponse.data);
     }
 
     createdTransaction.status = wompiResponse.data.data.status ?? 'OK';
